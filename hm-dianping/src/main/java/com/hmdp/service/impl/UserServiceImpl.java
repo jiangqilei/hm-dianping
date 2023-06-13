@@ -91,7 +91,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 						.setFieldValueEditor((fieldName,fieldValue) -> fieldValue.toString()));
 		//7.3存储
 		String tokenKey=LOGIN_USER_KEY+token;
-		stringRedisTemplate.opsForHash().putAll(LOGIN_USER_KEY+tokenKey,userMap);
+		stringRedisTemplate.opsForHash().putAll(tokenKey,userMap);
 		//7.4设置有效期
 		stringRedisTemplate.expire(tokenKey,LOGIN_USER_TTL,TimeUnit.MINUTES);
 		return Result.ok(token);
