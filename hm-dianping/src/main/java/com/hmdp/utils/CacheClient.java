@@ -118,6 +118,8 @@ public class CacheClient {
 
 	//尝试获取锁
 	private  boolean trylock(String key){
+		//如果键不存在，则设置成功并返回true；如果键已经存在，则设置失败并返回false。
+		//10和TimeUnit.MINUTES表示锁的过期时间为10分钟。十分钟后键便失效
 		Boolean flag =stringRedisTemplate.opsForValue().setIfAbsent(key,"1",10,TimeUnit.MINUTES);
 		return BooleanUtil.isTrue(flag);
 	}
