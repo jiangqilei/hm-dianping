@@ -11,12 +11,15 @@ import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.SimpleRedisLock;
 import com.hmdp.utils.UserHolder;
 import org.springframework.aop.framework.AopContext;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.Collections;
 
 /**
  * <p>
@@ -35,7 +38,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 	private ISeckillVoucherService seckillVoucherService;
 	@Resource
 	private RedisIdWorker redisIdWorker;
-	@Override
+	/*@Override
 	public Result seckillVoucher(Long voucherId) {
 		//1.查询优惠券
 		SeckillVoucher voucher = seckillVoucherService.getById(voucherId);
@@ -78,7 +81,37 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 		}
 
 	}
+*/
+	//初始化lua脚本
+	private static final DefaultRedisScript<Long> SECKILL_SCRIPT;
+	static {
+		SECKILL_SCRIPT=new DefaultRedisScript<>();
+		SECKILL_SCRIPT.setLocation(new ClassPathResource("unlock.lua"));
+		SECKILL_SCRIPT.setResultType(Long.class);
+	}
+	@Override
+	public Result seckillVoucher(Long voucherId) {
+		   //获取用户
+		Long userId = UserHolder.getUser().getId();
+		//1.执行lua脚本
+		Long result = stringRedisTemplate.execute(
+				SECKILL_SCRIPT,
+				Collections.emptyList(),
+				voucherId.toString(),
+				userId.toString()
+		);
+		//2.判断结果是否为0
+		int r= result.intValue();
+		if (r!=0){
+			//2.1不为0没有购买资格
+			return  Result.fail(r==1?"库存不足":"不能重复下单");
+		}
+		   //2.2为0，有购买资格，把下单信息保存到阻塞队列
+		long order = redisIdWorker.nextId("order");
+		//3.返回订单id
+		   return Result.ok(order);
 
+	}
 	@Transactional
 	public Result createVoucherOrder(Long voucherId) {
 		// 5.一人一单
