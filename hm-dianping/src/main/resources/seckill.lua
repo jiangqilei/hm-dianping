@@ -12,7 +12,7 @@ local userId = ARGV[2]
 --2.1库存key
 local stockKey='seckill:stock'..voucherId
 --2.2订单id
-local stockKey='seckill:stock'..voucherId
+local orderKey='seckill:stock'..voucherId
 --脚本业务
 --3.1判断库存是否充足get stockKey
 if (tonumber(redis.call('get',stockKey))<=0) then
