@@ -10,17 +10,18 @@ local voucherId = ARGV[1]
 local userId = ARGV[2]
 --2.数据key
 --2.1库存key
-local stockKey='seckill:stock'..voucherId
+local stockKey= 'seckill:stock:'..voucherId
 --2.2订单id
-local orderKey='seckill:stock'..voucherId
+local orderKey= 'seckill:order:'..voucherId
 --脚本业务
 --3.1判断库存是否充足get stockKey
-if (tonumber(redis.call('get',stockKey))<=0) then
-   --3.2库存不足返回1
+local stock = tonumber(redis.call('get', stockKey))
+if stock and stock <= 0 then
+    -- 库存不足返回1
     return 1
 end
 --3.2判断用户是否下单
-if(redis.call('sismember',orderKey,userId)==1) then
+if(redis.call('sismember',orderKey,userId) == 1) then
     --3.3存在，说明是重复下单，返回2
     return 2
 end
