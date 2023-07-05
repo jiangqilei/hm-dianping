@@ -125,7 +125,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 	}
 
 	private void handleVoucherOrder(VoucherOrder voucherOrder) {
-		Long userId = voucherOrder.getId();
+		Long userId = voucherOrder.getUserId();
 		// 创建锁对象
 		// SimpleRedisLock lock = new SimpleRedisLock("order:" + userId, stringRedisTemplate);
 		RLock lock = redissonClient.getLock("lock:order:" + userId);
@@ -172,8 +172,10 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 		voucherOrder.setId(orderid);
 		//2.4.用户id
 		//Long userId= UserHolder.getUser().getId();
-		//2.5代金卷id
+		//2.5用户id
 		voucherOrder.setUserId(userId);
+		// 2.5.代金券id
+		voucherOrder.setVoucherId(voucherId);
 		//2.6.放入阻塞队列
 		orderTasks.add(voucherOrder);
 		//3.获取代理对象
@@ -190,7 +192,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 		//对方法内部加锁
 
 			//5.1.查询订单
-			int count = query().eq("user_id", userId).eq("voucher_id", voucherOrder).count();
+			int count = query().eq("user_id", userId).eq("voucher_id", voucherOrder.getVoucherId()).count();
 			//5.2判断是否存在
 			if (count > 0) {
 				log.error("用户已经购买一次");
@@ -199,7 +201,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 			//6.扣减库存
 			boolean success = seckillVoucherService.update()
 					.setSql("stock=stock-1")
-					.eq("voucher_id", voucherOrder).gt("stock", 0)//添加where id=? and stock>0实现乐观锁
+					.eq("voucher_id", voucherOrder.getVoucherId()).gt("stock", 0)//添加where id=? and stock>0实现乐观锁
 					.update();
 			if (!success) {
 				log.error("库存不足");
