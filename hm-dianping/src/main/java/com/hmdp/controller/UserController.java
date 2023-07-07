@@ -2,6 +2,7 @@ package com.hmdp.controller;
 
 
 import cn.hutool.core.bean.BeanUtil;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.hmdp.dto.LoginFormDTO;
 import com.hmdp.dto.Result;
 import com.hmdp.dto.UserDTO;
@@ -9,12 +10,17 @@ import com.hmdp.entity.User;
 import com.hmdp.entity.UserInfo;
 import com.hmdp.service.IUserInfoService;
 import com.hmdp.service.IUserService;
+import com.hmdp.utils.RedisConstants;
 import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+
+import static com.hmdp.utils.RedisConstants.LOGIN_USER_KEY;
 
 /**
  * <p>
@@ -31,7 +37,8 @@ public class UserController {
 
     @Resource
     private IUserService userService;
-
+    @Resource
+    StringRedisTemplate stringRedisTemplate;
     @Resource
     private IUserInfoService userInfoService;
 
@@ -59,10 +66,21 @@ public class UserController {
      * @return 无
      */
     @PostMapping("/logout")
-    public Result logout(){
-        // TODO 实现登出功能
-        return Result.fail("功能未完成");
+    public Result logout(HttpServletRequest request) {
+        // 从请求头中获取token
+        String token = request.getHeader("Authorization");
+
+        if (StringUtils.isBlank(token)) {
+            // 如果Token为空，表示用户已登出或Token已失效
+            return Result.fail("User is already logged out or token is invalid");
+        } else {
+            // 删除存储在Redis中的Token
+            String tokenKey = LOGIN_USER_KEY + token;
+            stringRedisTemplate.delete(tokenKey);
+            return Result.ok("Logout successful");
+        }
     }
+
 
     @GetMapping("/me")
     public Result me(){
